@@ -1,0 +1,25 @@
+# Airflow Dependencies for GitHub Issues ETL Pipeline
+# Core Airflow dependencies
+apache-airflow>=2.7.0
+
+# ETL dependencies
+requests>=2.31.0
+pandas>=2.0.0
+pyspark>=3.4.0
+
+# Airflow providers
+apache-airflow-providers-email>=1.0.0
+apache-airflow-providers-http>=4.0.0
+
+# Custom operators dependencies
+schedule>=1.2.0
+
+# Monitoring and alerting
+slack-sdk>=3.0.0
+
+# Data quality
+great-expectations>=0.17.0
+
+# Visualization (optional)
+streamlit>=1.28.0
+plotly>=5.17.0

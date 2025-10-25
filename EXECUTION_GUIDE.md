@@ -1,193 +1,103 @@
-# 🚀 **Execution Guide - Step by Step**
+# 🚀 **Execution Guide - What to Run When**
 
-## **For New Users Opening Your GitHub Repository**
+## **📋 For New Users**
 
-### **📋 Prerequisites Checklist**
-- [ ] Databricks workspace access
-- [ ] Python environment with required packages
-- [ ] GitHub Personal Access Token (optional but recommended)
-- [ ] Basic understanding of Spark/Delta Lake
+### **Quick Start (3 Steps)**
+1. **Database Setup** → `sql/create_tables.sql`
+2. **ETL Pipeline** → `etl/github_issues_etl_databricks.py`
+3. **Dashboard** → `streamlit run visualizations/github_issues_dashboard.py`
 
-### **🎯 Execution Order (What to Run First)**
-
-## **Step 1: Database Setup** 
-```sql
--- Run this FIRST in Databricks SQL or notebook
-%run /path/to/sql/create_tables.sql
-```
-**What it does**: Creates the target table structure for your data
-**Expected result**: Table `loungebip_test.internal.huggingface_transformers_issues` created
-
----
-
-## **Step 2: ETL Pipeline (Main Data Loading)**
+### **Optional: Generate Charts**
 ```python
-# Run this SECOND in Databricks notebook
-%run /path/to/etl/github_issues_etl_databricks.py
+python create_funnel_chart.py
+python create_monthly_trends_2024.py
+python create_simple_labels_chart.py
+python create_long_open_issues_chart.py
 ```
-**What it does**: 
-- Fetches GitHub issues data via API
-- Transforms data with proper schema
-- Loads data into Delta Lake table
-- Handles 10,000+ issues with authentication
 
-**Expected result**: 
-- 10,000+ records loaded into your table
-- Logs showing successful data loading
-- Data ready for analysis
+## **🔄 For Automated Operations**
 
----
-
-## **Step 3: Generate Static Charts (Optional)**
-```python
-# Run these THIRD for static visualizations
-%run /path/to/create_funnel_chart.py
-%run /path/to/create_monthly_trends_2024.py
-%run /path/to/create_simple_labels_chart.py
-%run /path/to/create_long_open_issues_chart.py
-```
-**What it does**: Creates 25+ professional charts in PNG format
-**Expected result**: Charts saved in respective folders
-
----
-
-## **Step 4: Interactive Dashboard (Recommended)**
+### **Airflow Setup (Production)**
 ```bash
-# Run this FOURTH for interactive analysis
-streamlit run visualizations/github_issues_dashboard.py
+cd airflow
+docker-compose up -d
+# Access: http://localhost:8080 (airflow/airflow)
 ```
-**What it does**: 
-- Launches interactive Streamlit dashboard
-- Real-time data visualization
-- Funnel charts, trends, labels analysis
-- Interactive exploration of your data
 
-**Expected result**: 
-- Dashboard opens in browser
-- Interactive charts and metrics
-- Real-time data exploration
-
----
-
-## **🔄 Regular Updates (After Initial Setup)**
-
-### **Daily/Weekly Updates:**
+### **Data Quality Checks**
 ```python
-# Just run the ETL pipeline to get latest data
-%run /path/to/etl/github_issues_etl_databricks.py
+python data_quality/run_quality_checks.py
 ```
 
-### **Generate Updated Charts:**
-```python
-# Run chart scripts to update visualizations
-%run /path/to/create_*.py
-```
+## **🎯 Execution Order**
 
----
+### **First Time Setup:**
+1. Database → ETL → Dashboard
+2. Generate charts (optional)
+3. Set up Airflow (optional)
 
-## **📊 What Each Step Produces**
+### **Regular Updates:**
+1. ETL Pipeline (gets latest data)
+2. Dashboard (views updated data)
+3. Airflow (automated daily runs)
 
-### **Step 1 Output:**
-- ✅ Database table structure created
-- ✅ Schema optimized for analytics
-- ✅ ETL logging table ready
-
-### **Step 2 Output:**
-- ✅ 10,000+ GitHub issues loaded
-- ✅ Complete dataset with all fields
-- ✅ Data ready for analysis
-- ✅ Logs showing success/failure
-
-### **Step 3 Output:**
-- ✅ 25+ professional charts
-- ✅ Funnel analysis
-- ✅ Monthly trends
-- ✅ Labels analysis
-- ✅ Long-open issues analysis
-
-### **Step 4 Output:**
-- ✅ Interactive dashboard
-- ✅ Real-time data exploration
-- ✅ Interactive charts
-- ✅ Summary metrics
-- ✅ Data filtering capabilities
-
----
-
-## **🎯 Quick Start (5 Minutes)**
-
-### **Minimum Viable Setup:**
-1. **Database**: Run `sql/create_tables.sql`
-2. **ETL**: Run `etl/github_issues_etl_databricks.py`
-3. **Dashboard**: Run `streamlit run visualizations/github_issues_dashboard.py`
-
-### **Expected Timeline:**
-- **Database Setup**: 30 seconds
-- **ETL Pipeline**: 5-10 minutes (depending on data volume)
-- **Dashboard**: 30 seconds to launch
-
----
-
-## **🔧 Configuration Required**
+## **⚙️ Configuration Required**
 
 ### **Before Running ETL:**
-```python
-# Update these in github_issues_etl_databricks.py
-REPO_OWNER = "your_org"           # Change to your GitHub org
-REPO_NAME = "your_repo"           # Change to your repository
-GITHUB_TOKEN = "your_token"       # Add your GitHub token
-```
+- Update repository name in `etl/github_issues_etl_databricks.py`
+- Add GitHub token for higher rate limits
+- Update table name if needed
 
 ### **Before Running Dashboard:**
-```python
-# Update table name in github_issues_dashboard.py
-table_name = "your_schema.your_table"  # Change to your table
-```
+- Update table name in `visualizations/github_issues_dashboard.py`
+- Ensure data is loaded in the table
 
----
+### **Before Running Airflow:**
+- Set up Docker environment
+- Configure Airflow variables
+- Set up email notifications
 
-## **📈 Success Indicators**
+## **📊 Expected Results**
 
 ### **ETL Success:**
 - ✅ "Successfully loaded X records to table"
-- ✅ No error messages in logs
+- ✅ No error messages
 - ✅ Data visible in table
 
 ### **Dashboard Success:**
-- ✅ Dashboard opens in browser
+- ✅ Opens in browser
 - ✅ Charts display correctly
 - ✅ Data loads without errors
 
-### **Charts Success:**
-- ✅ PNG files generated in folders
-- ✅ No error messages during generation
-- ✅ Charts display properly
+### **Airflow Success:**
+- ✅ DAG appears in Airflow UI
+- ✅ Tasks execute successfully
+- ✅ Email notifications work
+
+## **🚨 Common Issues**
+
+### **ETL Issues:**
+- **Rate limiting**: Add GitHub token
+- **Schema errors**: Check data types
+- **Memory issues**: Process in batches
+
+### **Dashboard Issues:**
+- **Table not found**: Run ETL first
+- **Charts not loading**: Check data quality
+- **Performance issues**: Optimize queries
+
+### **Airflow Issues:**
+- **DAG not appearing**: Check file permissions
+- **Task failures**: Review logs
+- **Docker issues**: Check Docker setup
+
+## **📞 Support**
+
+- Check logs in Databricks/Airflow
+- Review error messages
+- Verify configuration settings
+- Ensure proper permissions
 
 ---
 
-## **🚨 Common Issues & Solutions**
-
-### **Issue: "Table not found"**
-**Solution**: Run Step 1 (Database Setup) first
-
-### **Issue: "Rate limit exceeded"**
-**Solution**: Add GitHub token to ETL script
-
-### **Issue: "Schema errors"**
-**Solution**: Check data types in ETL script
-
-### **Issue: "Dashboard won't start"**
-**Solution**: Install Streamlit: `pip install streamlit`
-
----
-
-## **🎯 Final Result**
-
-After completing all steps, you'll have:
-- ✅ **Complete GitHub issues dataset** in Delta Lake
-- ✅ **Interactive dashboard** for data exploration
-- ✅ **25+ professional charts** for analysis
-- ✅ **ETL pipeline** for regular updates
-- ✅ **Full documentation** for team use
-
-**Your GitHub repository will be a complete, professional analytics toolkit!** 🚀
+**This guide covers all execution scenarios without repetition!** 🎯

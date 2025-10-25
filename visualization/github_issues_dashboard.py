@@ -25,11 +25,15 @@ class GitHubIssuesDashboard:
     """
     
     def __init__(self):
-        # Initialize Spark session
-        self.spark = SparkSession.builder \
-            .appName("GitHubIssuesDashboard") \
-            .config("spark.sql.adaptive.enabled", "true") \
-            .getOrCreate()
+        # Use existing Spark session in Databricks
+        try:
+            self.spark = spark  # Databricks provides 'spark' variable
+        except NameError:
+            # Fallback for local development
+            self.spark = SparkSession.builder \
+                .appName("GitHubIssuesDashboard") \
+                .config("spark.sql.adaptive.enabled", "true") \
+                .getOrCreate()
         
         # Streamlit page config
         st.set_page_config(

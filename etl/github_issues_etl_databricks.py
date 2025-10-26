@@ -53,10 +53,45 @@ class GitHubIssuesETL:
         if github_token:
             headers['Authorization'] = f'token {github_token}'
             logger.info("GitHub authentication enabled")
+            
+            # Test token validity and permissions
+            self._test_token(github_token)
         else:
             logger.warning("No GitHub token provided - using unauthenticated requests (60/hour limit)")
         
         self.session.headers.update(headers)
+    
+    def _test_token(self, token: str):
+        """
+        Test if GitHub token is valid and has required permissions
+        """
+        try:
+            test_headers = {
+                'Authorization': f'token {token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            # Test authentication
+            response = requests.get('https://api.github.com/user', headers=test_headers, timeout=10)
+            
+            if response.status_code == 200:
+                user_info = response.json()
+                logger.info(f"✅ GitHub token is valid for user: {user_info.get('login')}")
+                
+                # Check rate limit
+                rate_response = requests.get('https://api.github.com/rate_limit', headers=test_headers)
+                if rate_response.status_code == 200:
+                    limits = rate_response.json()['resources']['core']
+                    logger.info(f"Rate limit: {limits['remaining']} requests remaining (limit: {limits['limit']})")
+                
+            elif response.status_code == 401:
+                logger.error("❌ GitHub token is invalid or expired")
+                raise Exception("GitHub token authentication failed. Please check your token.")
+            else:
+                logger.warning(f"⚠️ Unexpected response when testing token: {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"⚠️ Could not test GitHub token: {e}")
         
         # ETL metadata
         self.batch_id = str(uuid.uuid4())
@@ -86,10 +121,27 @@ class GitHubIssuesETL:
                 
                 logger.info(f"Fetching page {page}...")
                 response = self.session.get(self.base_url, params=params, timeout=30)
+                
+                # Check rate limit headers
+                remaining = response.headers.get('X-RateLimit-Remaining', 'unknown')
+                logger.info(f"Rate limit remaining: {remaining}")
+                
+                if response.status_code == 403:
+                    logger.error(f"Rate limit exceeded or unauthorized. Status: {response.status_code}")
+                    logger.error(f"Response: {response.text[:500]}")
+                    raise Exception("GitHub API rate limit exceeded. Please check your token or wait.")
+                
                 response.raise_for_status()
                 api_calls += 1
                 
                 issues = response.json()
+                
+                # Validate response format
+                if not isinstance(issues, list):
+                    logger.error(f"Unexpected response format. Expected list, got {type(issues)}")
+                    logger.error(f"Response: {str(issues)[:500]}")
+                    break
+                
                 if not issues:
                     break
                 
@@ -216,34 +268,111 @@ class GitHubIssuesETL:
     
     def load_to_table(self, df: 'pyspark.sql.DataFrame', table_name: str = "loungebip_test.internal.huggingface_transformers_issues") -> bool:
         """
-        Load data to Delta Lake table
+        Load data to Delta Lake table using SCD Type 2 (keeps history with effective dates)
+        Creates new row when record changes, expires old row
+        
+        Args:
+            df: Spark DataFrame with issue data
+            table_name: Target table name
+        
+        Returns:
+            bool: Success status
         """
         try:
             if df is None or df.count() == 0:
                 logger.warning("No data to load to table")
                 return False
             
-            # Write to Delta Lake table (append mode)
-            df.write \
-                .format("delta") \
-                .mode("append") \
-                .saveAsTable(table_name)
-            
-            logger.info(f"Successfully loaded {df.count()} records to {table_name}")
-            return True
-            
+            return self._load_with_scd2(df, table_name)
+                
         except Exception as e:
             logger.error(f"Error loading to table: {e}")
             return False
     
+    def _load_with_scd2(self, df: 'pyspark.sql.DataFrame', table_name: str) -> bool:
+        """
+        Load data using Type 2 SCD (keeps history with effective dates)
+        Creates new row when record changes, expires old row
+        """
+        try:
+            logger.info("Starting SCD Type 2 load (keeping history with effective dates)...")
+            
+            from pyspark.sql.functions import col, current_timestamp, lit, when, isnan, isnull
+            from datetime import datetime
+            
+            # Create temporary view for the new data
+            temp_view = "temp_new_issues"
+            df.createOrReplaceTempView(temp_view)
+            
+            # Step 1: Identify changed records and mark old ones as expired
+            expire_old_sql = f"""
+            UPDATE {table_name} AS target
+            SET effective_end_date = current_timestamp()
+            WHERE target.id IN (
+                SELECT source.id
+                FROM {temp_view} AS source
+                WHERE EXISTS (
+                    SELECT 1 
+                    FROM {table_name} AS existing
+                    WHERE existing.id = source.id
+                    AND (
+                        existing.state != source.state OR
+                        existing.comments != source.comments OR
+                        existing.updated_at != source.updated_at
+                    )
+                )
+            )
+            AND target.effective_end_date IS NULL
+            """
+            
+            self.spark.sql(expire_old_sql)
+            logger.info("Expired old records")
+            
+            # Step 2: Insert only changed or new records with effective_start_date
+            insert_new_sql = f"""
+            INSERT INTO {table_name}
+            SELECT 
+                source.*,
+                current_timestamp() AS effective_start_date,
+                NULL AS effective_end_date
+            FROM {temp_view} AS source
+            WHERE NOT EXISTS (
+                -- Skip if already exists with same data and current
+                SELECT 1
+                FROM {table_name} AS existing
+                WHERE existing.id = source.id
+                AND existing.effective_end_date IS NULL
+                AND existing.state = source.state
+                AND existing.comments = source.comments
+            )
+            """
+            
+            self.spark.sql(insert_new_sql)
+            
+            # Clean up temp view
+            self.spark.catalog.dropTempView(temp_view)
+            
+            records_count = df.count()
+            logger.info(f"Successfully loaded {records_count} records with SCD Type 2")
+            logger.info("✅ History preserved - new rows created for changes")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error in SCD2 load: {e}")
+            return False
+    
     def run_etl(self, max_pages: Optional[int] = None) -> bool:
         """
-        Run the complete ETL pipeline
+        Run the complete ETL pipeline using SCD Type 2 (keeps history)
+        
+        Args:
+            max_pages: Maximum number of pages to fetch (None for all)
         """
         try:
             logger.info("=" * 60)
             logger.info("Starting GitHub Issues ETL Pipeline")
             logger.info("=" * 60)
+            logger.info("Mode: SCD Type 2 (history preserved with effective dates)")
             
             # Fetch issues
             issues, api_calls = self.fetch_issues(max_pages=max_pages)
@@ -276,18 +405,31 @@ class GitHubIssuesETL:
 def main():
     """
     Main function to run the ETL pipeline in Databricks
+    
+    Usage:
+        1. Set your GitHub token as environment variable in Databricks notebook:
+           import os
+           os.environ['GITHUB_TOKEN'] = 'ghp_your_token_here'
+        
+        2. Run this script:
+           %run /path/to/github_issues_etl_databricks.py
     """
     # Configuration
     REPO_OWNER = "huggingface"
     REPO_NAME = "transformers"
     MAX_PAGES = None  # Set to None for all pages, or limit for testing
-    GITHUB_TOKEN = "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"  # Set your GitHub token here or use environment variable
     
-    
-    # Try to get token from environment variable
+    # Get token from environment variable
     import os
+    GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+    
     if not GITHUB_TOKEN:
-        GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+        logger.warning("No GitHub token provided - using unauthenticated requests (60/hour limit)")
+        logger.warning("To use authenticated requests:")
+        logger.warning("  import os")
+        logger.warning("  os.environ['GITHUB_TOKEN'] = 'ghp_your_token_here'")
+    else:
+        logger.info("Using GitHub token from environment variable")
     
     # Initialize and run ETL
     etl = GitHubIssuesETL(

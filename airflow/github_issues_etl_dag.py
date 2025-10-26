@@ -84,6 +84,16 @@ def run_etl_pipeline():
     import sys
     import os
     
+    # Get GitHub token from Airflow Variables or environment
+    github_token = Variable.get("GITHUB_TOKEN", default_var=None)
+    
+    # Set environment variable for the ETL script
+    if github_token:
+        os.environ['GITHUB_TOKEN'] = github_token
+        logging.info("GitHub token set from Airflow Variables")
+    else:
+        logging.warning("No GITHUB_TOKEN found in Airflow Variables - using unauthenticated requests")
+    
     # Get the ETL script path
     etl_script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'etl', 'github_issues_etl_databricks.py')
     

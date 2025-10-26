@@ -22,6 +22,7 @@ python create_long_open_issues_chart.py
 cd airflow
 docker-compose up -d
 # Access: http://localhost:8080 (airflow/airflow)
+# DAG: simplified_github_issues_etl (uses existing ETL script)
 ```
 
 ### **Data Quality Checks**
@@ -43,9 +44,29 @@ python data_quality/run_quality_checks.py
 
 ## **⚙️ Configuration Required**
 
+### **Step 0: Set Up GitHub Token**
+
+**For Databricks Notebook:**
+```python
+import os
+os.environ['GITHUB_TOKEN'] = 'ghp_your_token_here'
+```
+
+**For Airflow:**
+1. Go to Airflow UI → Admin → Variables
+2. Add variable:
+   - Key: `GITHUB_TOKEN`
+   - Value: `ghp_your_token_here`
+3. Click Save
+
+**Get Your Token:**
+- Visit: https://github.com/settings/tokens
+- Generate new token → Select `public_repo` scope
+- Copy and use the token above
+
 ### **Before Running ETL:**
-- Update repository name in `etl/github_issues_etl_databricks.py`
-- Add GitHub token for higher rate limits
+- Set GitHub token (above)
+- Update repository name in `etl/github_issues_etl_databricks.py` (optional)
 - Update table name if needed
 
 ### **Before Running Dashboard:**

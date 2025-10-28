@@ -138,7 +138,6 @@ CREATE TABLE issues (
 - ✅ Logs showing success
 
 ### **After Step 3 (Chart Generation):**
-- ✅ 25+ professional charts
 - ✅ Funnel analysis
 - ✅ Monthly trends
 - ✅ Labels analysis
@@ -163,23 +162,6 @@ CREATE TABLE issues (
 - Verify data access
 - Check permissions
 
-## **📊 Performance Expectations**
-
-### **ETL Pipeline:**
-- **Small dataset** (1,000 issues): 2-3 minutes
-- **Medium dataset** (5,000 issues): 5-7 minutes
-- **Large dataset** (10,000+ issues): 10-15 minutes
-
-### **Chart Generation:**
-- **Funnel charts**: 1-2 minutes
-- **Monthly trends**: 2-3 minutes
-- **Labels analysis**: 1-2 minutes
-- **Long-open analysis**: 2-3 minutes
-
-### **Dashboard:**
-- **Launch time**: 30 seconds
-- **Data loading**: 10-30 seconds
-- **Chart rendering**: 5-10 seconds per chart
 
 ## **🎯 Success Metrics**
 
@@ -200,4 +182,4 @@ CREATE TABLE issues (
 
 ---
 
-**This flow ensures users can successfully set up and use your GitHub Issues Analytics Toolkit!** 🚀
+

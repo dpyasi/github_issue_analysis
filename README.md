@@ -7,7 +7,7 @@ A comprehensive ETL pipeline and analytics toolkit for GitHub issues data, confi
 Complete solution for GitHub issues analytics:
 - **ETL Pipeline**: Fetches GitHub data → Transforms → Loads to Delta Lake
 - **Interactive Dashboard**: Real-time Streamlit dashboard with funnel charts
-- **Static Visualizations**: 25+ professional charts for analysis
+- **Static Visualizations**: charts for analysis
 - **Automated Scheduling**: Airflow DAGs for daily ETL runs
 - **Data Quality**: Automated checks and monitoring
 

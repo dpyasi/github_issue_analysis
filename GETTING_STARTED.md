@@ -128,7 +128,7 @@ table_name = "your_schema.your_table"  # Change to your table
 
 ---
 
-**That's it! You now have a complete GitHub Issues Analytics Toolkit running!** 🎯
+**That's it! You now have a complete GitHub Issues Analytics Pipeline running!** 🎯
 
 ## **📞 Need Help?**
 
@@ -136,3 +136,4 @@ table_name = "your_schema.your_table"  # Change to your table
 - Review `EXECUTION_GUIDE.md` for step-by-step instructions
 - See `PROJECT_FLOW.md` for understanding the data flow
 - Check error logs in Databricks for troubleshooting
+

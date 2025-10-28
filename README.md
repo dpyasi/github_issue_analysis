@@ -138,14 +138,6 @@ table_name = "loungebip_test.internal.huggingface_transformers_issues"
 - Ensure proper schema definition
 - Monitor Airflow UI for DAG status
 
-## 📚 **Documentation**
-
-- **`CHANGES_SUMMARY.md`**: Project evolution and features
-- **`ETL_CHANGES_SUMMARY.md`**: Technical implementation details
-- **`data_modeling_analysis.md`**: Database design decisions
-- **`schema_comparison_analysis.md`**: Schema optimization
-- **`airflow/AIRFLOW_SETUP.md`**: Airflow setup and usage
-
 ## 🚀 **Next Steps**
 
 1. **Customize**: Update repository and table names
